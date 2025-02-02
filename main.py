@@ -7,7 +7,8 @@ import csv
 from dotenv import load_dotenv
 
 from langchain_openai import AzureChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 
 load_dotenv()
 
@@ -31,12 +32,15 @@ def main():
         deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
     )
 
-    messages = [
-        SystemMessage("質問に対して簡潔に回答してください。"),
-        HumanMessage("こんにちは")
-    ]
+    human_message_template = HumanMessagePromptTemplate.from_template("{user_input}")
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            SystemMessage("質問に対して簡潔に回答してください。"),
+            human_message_template,
+        ]
+    )
 
-    response = llm.invoke(messages)
+    response = llm.invoke(chat_prompt.format_messages(user_input="こんにちは"))
     print(response.content)
 
 if __name__ == "__main__":
