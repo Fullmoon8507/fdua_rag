@@ -1,9 +1,14 @@
 """
 メインプログラム
 """
+import os
 import csv
 
+from dotenv import load_dotenv
+
 from langchain_openai import AzureChatOpenAI
+
+load_dotenv()
 
 def read_problem_csv_file():
     """ メイン処理 """
@@ -19,10 +24,10 @@ def read_problem_csv_file():
 def main2():
     """ メイン処理 """
     llm = AzureChatOpenAI(
-        azure_endpoint="AAA",
-        api_key="BBB",
-        api_version="CCC",
-        deployment_name="DDD",
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+        deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
     )
 
     response = llm.invoke("こんにちは")
