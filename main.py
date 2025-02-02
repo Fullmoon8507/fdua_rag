@@ -7,6 +7,7 @@ import csv
 from dotenv import load_dotenv
 
 from langchain_openai import AzureChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage
 
 load_dotenv()
 
@@ -21,7 +22,7 @@ def read_problem_csv_file():
 
         problem_list = [row[1] for row in reader]
 
-def main2():
+def main():
     """ メイン処理 """
     llm = AzureChatOpenAI(
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
@@ -30,9 +31,14 @@ def main2():
         deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
     )
 
-    response = llm.invoke("こんにちは")
+    messages = [
+        SystemMessage("質問に対して簡潔に回答してください。"),
+        HumanMessage("こんにちは")
+    ]
+
+    response = llm.invoke(messages)
     print(response.content)
 
 if __name__ == "__main__":
     # read_problem_csv_file()
-    main2()
+    main()
