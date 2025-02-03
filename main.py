@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 load_dotenv()
 
@@ -25,7 +26,7 @@ def read_problem_csv_file():
 
 def main():
     """ メイン処理 """
-    llm = AzureChatOpenAI(
+    model = AzureChatOpenAI(
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
         api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
@@ -40,8 +41,9 @@ def main():
         ]
     )
 
-    response = llm.invoke(chat_prompt.format_messages(user_input="こんにちは"))
-    print(response.content)
+    chain = chat_prompt | model | StrOutputParser()
+    response =  chain.invoke({"user_input": "こんにちは"})
+    print(response)
 
 if __name__ == "__main__":
     # read_problem_csv_file()
