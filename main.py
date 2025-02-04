@@ -6,10 +6,9 @@ import csv
 
 from dotenv import load_dotenv
 
-from langchain_openai import AzureChatOpenAI
-from langchain_core.messages import SystemMessage
-from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+from langchain_chroma import Chroma
+from langchain.chains.retrieval_qa.base import RetrievalQA
 
 load_dotenv()
 
@@ -33,18 +32,26 @@ def main():
         deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
     )
 
-    human_message_template = HumanMessagePromptTemplate.from_template("{user_input}")
-    chat_prompt = ChatPromptTemplate.from_messages(
-        [
-            SystemMessage("質問に対して簡潔に回答してください。"),
-            human_message_template,
-        ]
+    # Embedding
+    embeddings = AzureOpenAIEmbeddings(
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+    deployment=os.getenv("AZURE_OPENAI_EMBEDDINGS"),
     )
 
-    chain = chat_prompt | model | StrOutputParser()
-    response =  chain.invoke({"user_input": "こんにちは"})
-    print(response)
+    vectorstore = Chroma(persist_directory="./chroma", embedding_function=embeddings)
+    retriever = vectorstore.as_retriever()
+
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=model,
+        retriever = retriever,
+        return_source_documents=True,
+    )
+
+    user_input = "株式会社キッツの取締役の報酬のうち株式報酬の割合は何％？"
+    response = qa_chain.invoke(user_input)
+    print(response["result"])
 
 if __name__ == "__main__":
-    # read_problem_csv_file()
     main()
