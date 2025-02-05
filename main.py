@@ -25,19 +25,25 @@ def read_problem_csv_file():
 
 def main():
     """ メイン処理 """
+    # Model
     model = AzureChatOpenAI(
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
         api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
         deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+        temperature=os.getenv("AZURE_OPENAI_EMPERATURE"),
+        max_tokens=os.getenv("AZURE_OPENAI_AX_TOKENS"),
+        top_p=os.getenv("AZURE_OPENAI_OP_P"),
+        frequency_penalty=os.getenv("AZURE_OPENAI_REQUENCY_PENALTY"),
+        presence_penalty=os.getenv("AZURE_OPENAI_RESENCE_PENALTY"),
     )
 
     # Embedding
     embeddings = AzureOpenAIEmbeddings(
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-    deployment=os.getenv("AZURE_OPENAI_EMBEDDINGS"),
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+        deployment=os.getenv("AZURE_OPENAI_EMBEDDINGS"),
     )
 
     vectorstore = Chroma(persist_directory="./chroma", embedding_function=embeddings)
