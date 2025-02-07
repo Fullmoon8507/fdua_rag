@@ -10,8 +10,8 @@ from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-# from langchain_chroma import Chroma
-
+from langchain_core.runnables import RunnablePassthrough
+from langchain_chroma import Chroma
 load_dotenv()
 
 # Model
@@ -55,19 +55,40 @@ def main():
     problem_list = read_problem_csv_file()
 
     # ベクターデータベースの読み込み
-    # vectorstore = Chroma(persist_directory="./chroma", embedding_function=embeddings)
-    # retriever = vectorstore.as_retriever()
+    vectorstore = Chroma(persist_directory="./chroma", embedding_function=embeddings)
+    retriever = vectorstore.as_retriever()
 
-    human_message_template = HumanMessagePromptTemplate.from_template("{user_input}")
+    # Prompt
+    human_message_template = HumanMessagePromptTemplate.from_template('''\
+    文脈："""
+    {context}
+    """
+
+    # 質問：{question}
+    ''')
+
     chat_prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage("質問に対して簡潔に回答してください。"),
+            SystemMessage("質問に対して簡潔に１文で回答してください。"),
             human_message_template,
         ]
     )
 
-    chain = chat_prompt | model | StrOutputParser()
-    response =  chain.invoke({"user_input": problem_list[1]})
+    # インプット（引数）
+    input_dict = {
+        "context": retriever,
+        "question": RunnablePassthrough(),
+    }
+
+    # Chain
+    chain = (
+        input_dict
+        | chat_prompt
+        | model
+        | StrOutputParser()
+    )
+
+    response =  chain.invoke(problem_list[1])
     print(response)
 
 if __name__ == "__main__":
