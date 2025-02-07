@@ -7,8 +7,10 @@ import csv
 from dotenv import load_dotenv
 
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
-from langchain_chroma import Chroma
-from langchain.chains.retrieval_qa.base import RetrievalQA
+from langchain_core.messages import SystemMessage
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+# from langchain_chroma import Chroma
 
 load_dotenv()
 
@@ -52,18 +54,21 @@ def main():
     # queryファイル読み込み
     problem_list = read_problem_csv_file()
 
-    vectorstore = Chroma(persist_directory="./chroma", embedding_function=embeddings)
-    retriever = vectorstore.as_retriever()
+    # ベクターデータベースの読み込み
+    # vectorstore = Chroma(persist_directory="./chroma", embedding_function=embeddings)
+    # retriever = vectorstore.as_retriever()
 
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=model,
-        retriever = retriever,
-        return_source_documents=True,
+    human_message_template = HumanMessagePromptTemplate.from_template("{user_input}")
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            SystemMessage("質問に対して簡潔に回答してください。"),
+            human_message_template,
+        ]
     )
 
-    user_input = problem_list[1]
-    response = qa_chain.invoke(user_input)
-    print(response["result"])
+    chain = chat_prompt | model | StrOutputParser()
+    response =  chain.invoke({"user_input": problem_list[1]})
+    print(response)
 
 if __name__ == "__main__":
     main()
