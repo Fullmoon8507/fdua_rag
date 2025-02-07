@@ -16,7 +16,7 @@ from langchain_chroma import Chroma
 load_dotenv()
 
 def read_problem_csv_file():
-    """ メイン処理 """
+    """ 質問文CSVファイルの読み込み """
     problem_list = []
 
     # CSVファイル読み込み
@@ -68,7 +68,9 @@ def make_retriever():
 
     # ベクターデータベースの読み込み
     vectorstore = Chroma(persist_directory="./chroma", embedding_function=embeddings)
-    retriever = vectorstore.as_retriever()
+
+    # 検索結果上位３位までを取得
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
     return retriever
 
@@ -77,16 +79,18 @@ def make_prompt():
     """ プロンプトを生成 """
 
     human_message_template = HumanMessagePromptTemplate.from_template('''\
-    文脈："""
-    {context}
-    """
+    以下の文脈を参考にして、質問に簡潔に1文で回答してください。
 
-    # 質問：{question}
+    ### 文脈
+    {context}
+
+    ### 質問
+    {question}
     ''')
 
     chat_prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage("質問に対して簡潔に１文で回答してください。"),
+            SystemMessage("質問に対して適切な情報が文脈に含まれる場合のみ回答してください。"),
             human_message_template,
         ]
     )
@@ -132,7 +136,7 @@ def main():
         | output_parser
     )
 
-    response =  chain.invoke(problem_list[1])
+    response = chain.invoke(problem_list[1])
     print(response)
 
 if __name__ == "__main__":
