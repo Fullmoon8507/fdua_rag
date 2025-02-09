@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_core.messages import SystemMessage
-from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, FewShotChatMessagePromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_chroma import Chroma
@@ -78,6 +78,32 @@ def make_retriever():
 def make_prompt():
     """ プロンプトを生成 """
 
+    few_shot_examples = [
+        {
+            "input": "A株式会社が売り上げ上位３つのセグメントは？",
+            "output": "改修セグメント、医療用・産業用セグメント、官公庁セグメント",
+        },
+        {
+            "input": "B株式会社が海外に持っている拠点数は？",
+            "output": "36拠点",
+        },
+        {
+            "input": "2023下期の売り上げは？",
+            "output": "わかりません",
+        },
+    ]
+
+    few_shot_template = ChatPromptTemplate.from_messages(
+        [
+            ("human", "{input}"),
+            ("ai", "{output}")
+        ]
+    )
+
+    few_shot_prompt = FewShotChatMessagePromptTemplate(
+        example_prompt=few_shot_template,
+        examples=few_shot_examples,
+    )
     human_message_template = HumanMessagePromptTemplate.from_template('''\
     以下の文脈を参考にして、質問に簡潔に数単語で回答してください。
 
@@ -91,6 +117,7 @@ def make_prompt():
     chat_prompt = ChatPromptTemplate.from_messages(
         [
             SystemMessage("質問に対して適切な情報が文脈に含まれる場合のみ回答し、含まれない場合は「分かりません」と回答して。"),
+            few_shot_prompt,
             human_message_template,
         ]
     )
