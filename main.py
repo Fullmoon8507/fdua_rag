@@ -136,8 +136,11 @@ def main():
         | output_parser
     )
 
-    response = chain.invoke(problem_list[1])
-    print(response)
+    # 並行処理でチャットを実行
+    responses = chain.batch(problem_list, batch_size=10)
+    for question, response in zip(problem_list, responses):
+        print(f"質問: {question}\n回答: {response}\n")
+
 
 if __name__ == "__main__":
     main()
