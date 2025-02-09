@@ -138,8 +138,12 @@ def main():
 
     # 並行処理でチャットを実行
     responses = chain.batch(problem_list, batch_size=10)
-    for question, response in zip(problem_list, responses):
-        print(f"質問: {question}\n回答: {response}\n")
+
+    # チャット結果を応募形式に沿ったcsvファイルに出力
+    with open("submit/predictions.csv", "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        for i, response in enumerate(responses):
+            writer.writerow([i, response])
 
 
 if __name__ == "__main__":
