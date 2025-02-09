@@ -173,3 +173,5 @@ cython_debug/
 chroma/
 documents/
 .vscode/
+submit/ans_txt.csv
+submit/predictions.csv

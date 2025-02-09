@@ -79,7 +79,7 @@ def make_prompt():
     """ プロンプトを生成 """
 
     human_message_template = HumanMessagePromptTemplate.from_template('''\
-    以下の文脈を参考にして、質問に簡潔に1文で回答してください。
+    以下の文脈を参考にして、質問に簡潔に数単語で回答してください。
 
     ### 文脈
     {context}
@@ -90,7 +90,7 @@ def make_prompt():
 
     chat_prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage("質問に対して適切な情報が文脈に含まれる場合のみ回答してください。"),
+            SystemMessage("質問に対して適切な情報が文脈に含まれる場合のみ回答し、含まれない場合は「分かりません」と回答して。"),
             human_message_template,
         ]
     )
