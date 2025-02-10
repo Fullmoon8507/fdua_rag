@@ -4,17 +4,40 @@
 import os
 import csv
 import time
+import tiktoken
 
 from dotenv import load_dotenv
 
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, FewShotChatMessagePromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+# from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_chroma import Chroma
 
 load_dotenv()
+
+
+class TokenLimitOutputParser(BaseOutputParser):
+    """ トークン数を超える文字列を切り詰めるパーサー """
+
+    def parse(self, text: str) -> str:
+
+        tokenizer = tiktoken.encoding_for_model("gpt-4-turbo")
+        max_token = 54
+
+        # トークン数を取得
+        tokens = tokenizer.encode(text)
+
+        if len(tokens) > max_token:
+
+            # 54トークン以内に切り詰める
+            trimmed_text = tokenizer.decode(tokens[:max_token])
+            return trimmed_text
+
+        return text
+
 
 def read_problem_csv_file():
     """ 質問文CSVファイルの読み込み """
@@ -97,7 +120,7 @@ def search_from_vectorstore(search_key):
     document = ""
     for doc in result_list:
         document += f"docName={doc[1]},\n"
-        document += f"docContent={doc[0]}\ea"
+        document += f"docContent={doc[0]}\n"
 
     # return result_list
     return document
@@ -156,7 +179,8 @@ def make_prompt():
 def make_output_parser():
     """ パーサーを生成 """
 
-    return StrOutputParser()
+    # return StrOutputParser()
+    return TokenLimitOutputParser()
 
 
 def main():
