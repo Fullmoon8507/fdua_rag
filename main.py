@@ -37,11 +37,11 @@ def make_chat_model():
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
         api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
         deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-        temperature=os.getenv("AZURE_OPENAI_EMPERATURE"),
-        max_tokens=os.getenv("AZURE_OPENAI_AX_TOKENS"),
-        top_p=os.getenv("AZURE_OPENAI_OP_P"),
-        frequency_penalty=os.getenv("AZURE_OPENAI_REQUENCY_PENALTY"),
-        presence_penalty=os.getenv("AZURE_OPENAI_RESENCE_PENALTY"),
+        temperature=os.getenv("AZURE_OPENAI_TEMPERATURE"),
+        max_tokens=os.getenv("AZURE_OPENAI_MAX_TOKENS"),
+        top_p=os.getenv("AZURE_OPENAI_TOP_P"),
+        frequency_penalty=os.getenv("AZURE_OPENAI_FREQUENCY_PENALTY"),
+        presence_penalty=os.getenv("AZURE_OPENAI_PRESENCE_PENALTY"),
     )
 
     return model
