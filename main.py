@@ -3,6 +3,7 @@
 """
 import os
 import csv
+import time
 
 from dotenv import load_dotenv
 
@@ -75,6 +76,33 @@ def make_retriever():
     return retriever
 
 
+def search_from_vectorstore(search_key):
+    """ VectorStoreから文章検索 """
+
+    # Embedding
+    embeddings = make_embeddings()
+
+    # ベクターデータベースの読み込み
+    vectorstore = Chroma(persist_directory="./chroma", embedding_function=embeddings)
+
+    # 検索
+    document_list = vectorstore.similarity_search(query=search_key, k=3)
+
+    # 必要な情報のみを抽出
+    result_list = []
+    for document in document_list:
+        result_list.append((document.page_content, document.metadata['source']))
+
+    # promptに埋め込むようのフォーマットに変換
+    document = ""
+    for doc in result_list:
+        document += f"docName={doc[1]},\n"
+        document += f"docContent={doc[0]}\ea"
+
+    # return result_list
+    return document
+
+
 def make_prompt():
     """ プロンプトを生成 """
 
@@ -116,7 +144,7 @@ def make_prompt():
 
     chat_prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage("質問に対して適切な情報が文脈に含まれる場合のみ回答し、含まれない場合は「分かりません」と回答して。"),
+            SystemMessage("質問に対して適切な情報が文脈に含まれる場合のみ回答し、含まれない場合は「分かりません」と回答して。回答は必ず54トークン以内に短縮して簡潔に述べること。"),
             few_shot_prompt,
             human_message_template,
         ]
@@ -137,12 +165,9 @@ def main():
     # queryファイル読み込み
     problem_list = read_problem_csv_file()
 
-    # Retriever
-    retriever = make_retriever()
-
     # インプット（引数）
     input_dict = {
-        "context": retriever,
+        "context": RunnablePassthrough(),
         "question": RunnablePassthrough(),
     }
 
@@ -163,8 +188,20 @@ def main():
         | output_parser
     )
 
-    # 並行処理でチャットを実行
-    responses = chain.batch(problem_list, batch_size=10)
+    responses = []
+    for i, problem in enumerate(problem_list):
+
+        # ベクターデータベースから文章検索
+        document = search_from_vectorstore(problem)
+
+        print(f"{i+1}番目 問題： {problem}")
+
+        response = chain.invoke({"context": document, "question": problem})
+        responses.append(response)
+
+        print(f"{i+1}番目 回答： {response}")
+
+        time.sleep(1)
 
     # チャット結果を応募形式に沿ったcsvファイルに出力
     with open("submit/predictions.csv", "w", encoding="utf-8", newline="") as f:
