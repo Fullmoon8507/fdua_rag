@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, FewShotChatMessagePromptTemplate
-# from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_chroma import Chroma
@@ -71,6 +71,21 @@ def make_chat_model():
     return model
 
 
+def make_virtual_answer_model():
+    """ Azure OpenAIのチャットモデルを生成(仮想回答用) """
+
+    model = AzureChatOpenAI(
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+        deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+        temperature=os.getenv("AZURE_OPENAI_TEMPERATURE"),
+        top_p=os.getenv("AZURE_OPENAI_TOP_P"),
+        frequency_penalty=os.getenv("AZURE_OPENAI_FREQUENCY_PENALTY"),
+        presence_penalty=os.getenv("AZURE_OPENAI_PRESENCE_PENALTY"),
+    )
+
+    return model
 def make_embeddings():
     """ Azure OpenAIのエンベディングを生成 """
 
@@ -176,6 +191,18 @@ def make_prompt():
     return chat_prompt
 
 
+def make_hypothetical_prompt():
+    """ 仮想回答用のプロンプト """
+
+    hypothetical_prompt = ChatPromptTemplate.from_template('''\
+    次の質問に回答する一文を書いてください。
+
+    質問：{question}
+    ''')
+
+    return hypothetical_prompt
+
+
 def make_output_parser():
     """ パーサーを生成 """
 
@@ -197,15 +224,23 @@ def main():
 
     # Prompt
     chat_prompt = make_prompt()
+    hypothetical_prompt = make_hypothetical_prompt()
 
     # Model
     model = make_chat_model()
+    virtual_answer_model = make_virtual_answer_model()
 
     # Output Parser
     output_parser = make_output_parser()
 
     # Chain
-    chain = (
+    hypothetical_chain = (
+        hypothetical_prompt
+        | virtual_answer_model
+        | StrOutputParser()
+    )
+
+    hyde_rag_chain = (
         input_dict
         | chat_prompt
         | model
@@ -215,15 +250,19 @@ def main():
     responses = []
     for i, problem in enumerate(problem_list):
 
-        # ベクターデータベースから文章検索
-        document = search_from_vectorstore(problem)
+        # 仮想の回答を生成
+        virtual_answer = hypothetical_chain.invoke(problem)
 
-        print(f"{i+1}番目 問題： {problem}")
+        # 仮想の回答を検索キーに、ベクターデータベースから文章検索
+        document = search_from_vectorstore(virtual_answer)
 
-        response = chain.invoke({"context": document, "question": problem})
+        print(f"{i+1}番目 問題　　： {problem}")
+        print(f"{i+1}番目 仮想回答： {virtual_answer}")
+
+        response = hyde_rag_chain.invoke({"context": document, "question": problem})
         responses.append(response)
 
-        print(f"{i+1}番目 回答： {response}")
+        print(f"{i+1}番目 回答　　： {response}")
 
         time.sleep(1)
 
