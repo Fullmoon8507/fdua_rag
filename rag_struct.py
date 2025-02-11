@@ -3,14 +3,15 @@ ChromaDBを用いてベクターデータベースを作成する。
 """
 import os
 import time
+import pdfplumber
 
 from dotenv import load_dotenv
 
-from langchain_community.document_loaders import PyMuPDFLoader
-# from langchain_community.vectorstores import Chroma
+# from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_chroma import Chroma
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.docstore.document import Document
 
 load_dotenv()
 
@@ -48,6 +49,17 @@ embeddings = AzureOpenAIEmbeddings(
     deployment=os.getenv("AZURE_OPENAI_EMBEDDINGS"),
 )
 
+
+def extract_text_from_pdf(pdf_path):
+    """pdfplumber を用いて PDF からテキストを抽出する"""
+    texts = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            texts.append(page.extract_text() or "")
+
+    return "\n".join(texts)
+
+
 if __name__ == "__main__":
 
     # ベクターデータベースの保存先
@@ -59,11 +71,13 @@ if __name__ == "__main__":
         print(f"{pdf_file}のEmbeddingを実行")
 
         # PDF読み込み
-        loader = PyMuPDFLoader(pdf_file)
-        data = loader.load()
+        # loader = PyMuPDFLoader(pdf_file)
+        # data = loader.load()
+        pdf_text = extract_text_from_pdf(pdf_file)
+        document = Document(page_content=pdf_text, metadata={"source": pdf_file})
 
         # テキスト分割
-        chunks = text_splitter.split_documents(data)
+        chunks = text_splitter.split_documents([document])
 
         # ChromaDBに保存。また、永続化する。
         vectorstore.add_documents(chunks)
