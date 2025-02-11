@@ -3,6 +3,7 @@ ChromaDBを用いてベクターデータベースを作成する。
 """
 import os
 import time
+import fitz
 import pdfplumber
 
 from dotenv import load_dotenv
@@ -53,11 +54,47 @@ embeddings = AzureOpenAIEmbeddings(
 def extract_text_from_pdf(pdf_path):
     """pdfplumber を用いて PDF からテキストを抽出する"""
     texts = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            texts.append(page.extract_text() or "")
+    doc = fitz.open(pdf_path)
+
+    # ページ単位でループ
+    for page_num in range(len(doc)):
+
+        # PyMuPDFでテキスト抽出
+        page = doc[page_num]
+        text = page.get_text("text")
+
+        # テキストが取得できた場合(空白だけのデータ無視)
+        if text.strip():
+            texts.append(text)
+        
+        # PyMuPDFで抽出できなかった場合、pdfplumberで補完
+        else:
+            print("pdfplumberでPDF読み込み")
+
+            # pdfplumberでPDFを開く
+            with pdfplumber.open(pdf_path) as pdf:
+                table_text = []
+
+                # 現在のページを取得
+                pdf_page = pdf.pages[page_num]
+
+                # 表があれば取得
+                tables = pdf_page.extract_table()
+
+                # テーブルの各行に対して、セルの値を | で区切って 1 行のテキストに変換
+                if tables:
+                    print("テーブルのテキスト化あり")
+
+                    for row in tables:
+                        # None を 空文字("") に置き換える
+                        cleaned_row = [cell if cell is not None else "" for cell in row]
+                        table_text.append(" | ".join(cleaned_row))
+                
+                # すべての行を改行で結合
+                texts.append("\n".join(table_text))
 
     return "\n".join(texts)
+
 
 
 if __name__ == "__main__":
@@ -83,7 +120,7 @@ if __name__ == "__main__":
         vectorstore.add_documents(chunks)
 
         # HTTPステータス500回避のため、Sleepを入れる。
-        time.sleep(30)
+        time.sleep(10)
 
     print("すべてのPDFをChromaDBに保存しました。")
     for pdf in load_pdf_list:
